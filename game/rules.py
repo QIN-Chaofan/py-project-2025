@@ -1,6 +1,8 @@
 from typing import List, Tuple
 from .rooms import RoomType, DIRS
 from .rng import RNG
+from typing import Iterable
+from .rooms import rarity_weight
 
 LockLevel = int  # 0,1,2
 
@@ -36,3 +38,28 @@ def lock_level_for_depth(row: int, total_rows: int, rng: RNG) -> LockLevel:
     p0 = max(0.0, 1.0 - p1 - p2)
     r = rng.random()
     return 2 if r < p2 else (1 if r < p2 + p1 else 0)
+def deal_room_choices(all_rooms: Iterable[RoomType],
+                      pos, ctx, rng: RNG) -> list[RoomType]:
+    legal = [rt for rt in all_rooms if can_place_room(rt, pos, ctx)]
+    if not legal:
+        return []  # 交给 engine 决定“死路”处理
+    weights = [rarity_weight(rt.rarity) for rt in legal]
+    picks: list[RoomType] = []
+    pool = legal.copy()
+
+    # 先尽量抽出至少 1 个 gem_cost==0
+    zeros = [rt for rt in pool if rt.gem_cost == 0]
+    if zeros:
+        picks.append(rng.choice_weighted(zeros, [rarity_weight(r.rarity) for r in zeros]))
+        pool.remove(picks[-1])
+
+    # 抽满 3 个
+    while len(picks) < 3 and pool:
+        w = [rarity_weight(r.rarity) for r in pool]
+        sel = rng.choice_weighted(pool, w)
+        picks.append(sel)
+        pool.remove(sel)
+
+    # 若不足 3，返回已有（engine 层可提示“可再掷骰子”）
+    return picks
+
