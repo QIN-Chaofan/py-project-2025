@@ -8,24 +8,32 @@ LockLevel = int  # 0,1,2
 
 def within_bounds(r:int,c:int, R:int, C:int)->bool: return 0<=r<R and 0<=c<C
 
-def doors_match(new_room: RoomType, pos: Tuple[int,int], grid_doors_view) -> bool:
-    r,c = pos
-    for d,(dr,dc) in DIRS.items():
-        nr, nc = r+dr, c+dc
-        neighbor = grid_doors_view(nr,nc) if within_bounds(nr,nc,5,9) else None
-        if neighbor is None:
-            # 如果邻位未放置，允许 new_room 在该方向开门（门通向未知）
+def doors_match(new_room: RoomType, pos: Tuple[int,int], ctx) -> bool:
+    r, c = pos
+    for d, (dr, dc) in DIRS.items():
+        nr, nc = r + dr, c + dc
+
+        # 如果越界，新房间这个方向不能有门
+        if not within_bounds(nr, nc, ctx.rows, ctx.cols):
+            if new_room.doors.get(d, False):
+                return False
             continue
-        # 邻位已放置：双向门必须匹配
-        opp = {"N":"S","S":"N","W":"E","E":"W"}[d]
-        if new_room.doors.get(d, False) != bool(neighbor.get(opp, False)):
+
+        neighbor = ctx.grid_doors_view(nr, nc)
+        if neighbor is None:
+            continue  # 邻位没房间 → 可以有门，等未来接上
+
+        opp = {"N": "S", "S": "N", "W": "E", "E": "W"}[d]
+        if bool(new_room.doors.get(d, False)) != bool(neighbor.get(opp, False)):
             return False
     return True
+
 
 def can_place_room(rt: RoomType, pos, ctx) -> bool:
     if not within_bounds(pos[0],pos[1], ctx.rows, ctx.cols): return False
     if not rt.can_place(pos, ctx): return False
-    return doors_match(rt, pos, ctx.grid_doors_view)
+    return doors_match(rt, pos, ctx)
+
 
 def lock_level_for_depth(row: int, total_rows: int, rng: RNG) -> LockLevel:
     # 首行全 0，末行全 2；中间行概率随 row 单调提升（示例分布）
