@@ -57,14 +57,36 @@ def run_engine(seed: int, rows: int, cols: int, pos: Tuple[int, int], samples: i
     eng.start_new(seed=seed)
 
     if samples <= 1:
-        choices = eng.deal_room_choices(pos)
+        # —— 为了演示 open->choices->reroll->choose，给一点资源方便支付 —— #
+        eng.inv.gems = 5
+        eng.inv.dice = 1
+
         print(f"[engine] pos={pos} seed={seed} rows×cols={rows}×{cols} stage={eng.stage}")
-        if not choices:
-            print("  -> 无可放置候选（可能位置/约束太严格）")
+
+        # 尝试在 pos 放新房（真实流程：玩家从当前格朝某方向走到 pos，这里直接演示）
+        ok = eng.open_new_door(pos, from_dir="N")  # from_dir 是“新房相对入口”的对向（示例给 N 即可）
+        if not ok or eng.stage != "CHOOSING":
+            print("  -> 无法进入三选一（可能资源不足或位置不合法）")
             return
-        for i, r in enumerate(choices):
-            print(f"  [{i}] {r.name:16s} doors={r.doors} gem={r.gem_cost} rarity={r.rarity}")
+
+        print("  初始候选：", [r.name for r in eng.cached_choices])
+
+        # 演示重掷（如果有骰子）
+        if eng.reroll_choices():
+            print("  重掷后候选：", [r.name for r in eng.cached_choices])
+        else:
+            print("  无法重掷（没有骰子）")
+
+        # 选择第 0 个候选并放置
+        if eng.cached_choices:
+            placed = eng.cached_choices[0].name
+            ok = eng.choose_room(0)
+            print(f"  选择并放置 -> {placed} / success={ok}")
+            print("  当前位置:", eng.cursor, "剩余步数:", eng.inv.steps, "阶段:", eng.stage)
+        else:
+            print("  -> 没有可选择的候选项")
     else:
+        # 多次抽样统计（保持你原来的统计逻辑）
         tally = Counter()
         for _ in range(samples):
             ch = eng.deal_room_choices(pos)
@@ -73,8 +95,7 @@ def run_engine(seed: int, rows: int, cols: int, pos: Tuple[int, int], samples: i
         print(f"[engine] pos={pos} seed={seed} samples={samples}")
         for name, cnt in tally.most_common():
             print(f"  {name:16s} -> {cnt}")
-
-
+            
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["engine", "direct"], default="engine",
