@@ -201,3 +201,6 @@ class Room:
         return f"Room({self.name}, {self.color}, Rareté {self.rarity}, Coût {self.gem_cost} gemmes)"
 
 
+
+
+
