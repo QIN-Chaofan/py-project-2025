@@ -145,3 +145,4 @@ class Door:
         return f"Porte({self.direction}, {status})"
 
 
+
