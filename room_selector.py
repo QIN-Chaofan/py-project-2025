@@ -78,7 +78,7 @@ class RoomSelector:
                 rarity=0,
                 gem_cost=0,
                 doors=doors,
-                image_path=None
+                image_path="images/SalleOrdinaire.png"  # Utilisez le chemin d'accès correct à l'image
             )
             # Vérifier si cette salle peut être placée
             can_place, _ = basic_room.can_place_at(row, col, mansion)
