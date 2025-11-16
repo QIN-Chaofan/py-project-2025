@@ -236,3 +236,5 @@ class Player:
     def __str__(self):
         return f"Player(Position: ({self.row}, {self.col}), Pas: {self.inventory.steps.amount})"
 
+
+
