@@ -435,7 +435,8 @@ class UI:
             if count > 0:
                 text = self.font_small.render(f"{name} : {count}", True, GREEN)
             else:
-                text = self.font_small.render(f"{name} : {count}", True, GRAY)
+                # Utilisez du blanc pour garantir une bonne visibilité
+                text = self.font_small.render(f"{name} : {count}", True, WHITE)
             self.screen.blit(text, (x + 20, y))
             y += 25
 
@@ -446,19 +447,6 @@ class UI:
         )
         self.screen.blit(pos_text, (x, y))
 
-        # Debug : position de rendu (pour vérifier les coordonnées)
-        y += 20
-        player_x = (
-            self.grid_x + game.player.col * self.cell_size + self.cell_size // 2
-        )
-        player_y = (
-            self.grid_y + game.player.row * self.cell_size + self.cell_size // 2
-        )
-        render_pos_text = self.font_small.render(
-            f"Position de rendu : ({player_x}, {player_y})", True, GRAY
-        )
-        self.screen.blit(render_pos_text, (x, y))
-
         # Informations sur la salle actuelle
         current_room = game.get_current_room()
         if current_room:
@@ -467,35 +455,28 @@ class UI:
                 f"Salle : {current_room.name}", True, WHITE
             )
             self.screen.blit(room_text, (x, y))
+            
+            # Afficher les informations détaillées sur l'emplacement uniquement en mode débogage
+            # Mettre en commentaire les informations de débogage pour optimiser l'interface
 
-            # Debug : position réelle de la salle
-            if hasattr(current_room, "row") and hasattr(current_room, "col"):
-                y += 20
-                room_pos_text = self.font_small.render(
-                    f"Position de la salle : ({current_room.row}, {current_room.col})",
-                    True,
-                    GRAY,
-                )
-                self.screen.blit(room_pos_text, (x, y))
-
-                # Vérifier une éventuelle incohérence de position
-                if (
-                    current_room.row != game.player.row
-                    or current_room.col != game.player.col
-                ):
-                    y += 20
-                    mismatch_text = self.font_small.render(
-                        "⚠ Position incohérente !", True, RED
-                    )
-                    self.screen.blit(mismatch_text, (x, y))
+            # if hasattr(current_room, "row") and hasattr(current_room, "col"):
+            #     y += 20
+            #     room_pos_text = self.font_small.render(
+            #         f"Position de la salle : ({current_room.row}, {current_room.col})",
+            #         True,
+            #         GRAY,
+            #     )
+            #     self.screen.blit(room_pos_text, (x, y))
 
     def _render_reset_button(self, game):
         """Dessiner le bouton de réinitialisation"""
         # Position du bouton : en bas du panneau d'inventaire
+        # Ajustez la position du bouton pour vous assurer qu'il ne chevauche pas les invites de commande
         button_x = self.panel_x
-        button_y = self.height - 150
-        button_width = 150
-        button_height = 40
+        button_y = self.height - 160
+        # Augmentez la taille du bouton pour accueillir le texte en français "Réinitialiser la partie"
+        button_width = 280
+        button_height = 50
 
         # Position de la souris (pour effet de survol)
         mouse_pos = pygame.mouse.get_pos()
@@ -687,8 +668,29 @@ class UI:
     def _render_message(self, message):
         """Rendu du message temporaire"""
         if message:
+            # Si le message est trop long, passez à la ligne suivante
+            max_width = 600  # Largeur maximale
             msg_text = self.font_medium.render(message, True, YELLOW)
-            self.screen.blit(msg_text, (50, self.height - 100))
+            
+            # Si le texte est trop large, essayez de le tronquer ou de le couper sur une nouvelle ligne
+            if msg_text.get_width() > max_width:
+                # Couper le texte et ajouter des points de suspension
+                words = message.split()
+                truncated = ""
+                for word in words:
+                    test_text = truncated + (" " if truncated else "") + word
+                    test_surface = self.font_medium.render(test_text + "...", True, YELLOW)
+                    if test_surface.get_width() > max_width:
+                        truncated += "..."
+                        break
+                    truncated = test_text
+                msg_text = self.font_medium.render(truncated, True, YELLOW)
+            
+            # Les notifications apparaissent dans le coin supérieur droit afin d'éviter tout chevauchement avec les invites de contrôle situées dans le coin inférieur gauche
+            # Position : coin supérieur droit, avec des marges suffisantes par rapport aux bords droit et supérieur
+            msg_x = self.width - msg_text.get_width() - 20
+            msg_y = 20
+            self.screen.blit(msg_text, (msg_x, msg_y))
 
     def _render_controls(self):
         """Rendu des aides de contrôle"""
@@ -704,15 +706,24 @@ class UI:
 
         controls = [
             move_hint,
-            "E : interagir avec les objets de la salle  B : boutique (salle jaune)",
+            "E : interagir avec les objets  B : boutique (salle jaune)",
             "R : relancer les salles (nécessite un dé)",
             "Échap : annuler/retour",
         ]
-        y = self.height - 60
+        # Calculez la hauteur totale requise : 4 lignes de texte, chacune d'environ 25 px (espacement compris)
+        # font_small est de 20 px ; en ajoutant l'espacement entre les lignes, chaque ligne nécessite en réalité environ 25 px
+        line_height = 25
+        total_height = len(controls) * line_height
+        # Les invites de contrôle s'affichent dans le coin inférieur gauche, garantissant ainsi une marge suffisante.
+        y = self.height - total_height - 20  # Laissez une marge de 20 pixels en bas.
         for control in controls:
-            control_text = self.font_small.render(control, True, GRAY)
+            control_text = self.font_small.render(control, True, LIGHT_GRAY)  # Utilisez une nuance de gris plus claire.
+            # Vérifiez si le texte dépassera le bas de l'écran
+            text_height = control_text.get_height()
+            if y + text_height > self.height - 5:  # Laissez une marge de 5 pixels
+                break  # Si cela dépasse l'écran, arrêtez le rendu
             self.screen.blit(control_text, (50, y))
-            y += 20
+            y += line_height
 
     def _render_item_picking(self, game):
         """Rendu de l'écran d'interaction avec les objets de la salle"""
@@ -799,16 +810,47 @@ class UI:
 
         # Essayer de charger l'image
         try:
-            if os.path.exists(room.image_path):
-                image = pygame.image.load(room.image_path)
-                # Redimensionner l'image à la taille de la cellule
-                image = pygame.transform.scale(image, (self.cell_size, self.cell_size))
-                # Mettre en cache
-                self.room_images[room.image_path] = image
-                return image
+            # Essayer plusieurs itinéraires possibles (par ordre de priorité)
+            current_dir = os.getcwd()
+            possible_paths = [
+                room.image_path,  # Chemin d'origine (chemin relatif)
+                os.path.join(current_dir, room.image_path),  # Répertoire de travail actuel + chemin relatif
+            ]
+            
+            # Si le chemin contient « images/ », essayez également de le localiser à partir du répertoire racine du projet
+            if "images/" in room.image_path:
+                # Essayer de localiser à partir du répertoire parent du répertoire actuel (si actuellement dans un sous-répertoire)
+                parent_dir = os.path.dirname(current_dir)
+                possible_paths.append(os.path.join(parent_dir, room.image_path))
+            
+            image_loaded = False
+            for img_path in possible_paths:
+                # Chemins standardisés, gestion des chemins relatifs et absolus
+                normalized_path = os.path.normpath(img_path)
+                if os.path.exists(normalized_path) and os.path.isfile(normalized_path):
+                    try:
+                        image = pygame.image.load(normalized_path)
+                        # Redimensionner l'image à la taille de la cellule
+                        image = pygame.transform.scale(image, (self.cell_size, self.cell_size))
+                        # Mettre en cache (En utilisant le chemin d'origine comme clé)
+                        self.room_images[room.image_path] = image
+                        image_loaded = True
+                        break
+                    except pygame.error as e:
+                        # Si Pygame ne parvient pas à se charger, passez au chemin suivant
+                        print(f"Erreur pygame lors du chargement de {normalized_path}: {e}")
+                        continue
+            
+            if image_loaded:
+                return self.room_images[room.image_path]
             else:
-                print(f"Fichier d'image inexistant : {room.image_path}")
+                # Si toutes les voies échouent, afficher les informations de débogage (uniquement en mode débogage)
+                print(f"[DEBUG] Fichier d'image inexistant pour '{room.name}': {room.image_path}")
+                print(f"  Tentatives: {possible_paths}")
+                print(f"  Répertoire actuel: {current_dir}")
                 return None
         except Exception as e:
-            print(f"Impossible de charger l'image de salle {room.image_path} : {e}")
+            print(f"Erreur lors du chargement de l'image de salle '{room.name}' ({room.image_path}): {e}")
+            import traceback
+            traceback.print_exc()
             return None

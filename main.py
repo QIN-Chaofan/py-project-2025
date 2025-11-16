@@ -21,6 +21,15 @@ def main():
     keys_pressed_last_frame = set()
     key_repeat_timer = {}  # Minuteries de répétition des touches (en millisecondes)
     
+    # Groupes de touches directionnelles (flèches + WASD/ZQSD)
+    # Défini en dehors de la boucle afin de garantir qu'il reste accessible tout au long de la boucle du jeu
+    direction_keys = [
+        (pygame.K_UP, pygame.K_w, pygame.K_z),
+        (pygame.K_DOWN, pygame.K_s),
+        (pygame.K_LEFT, pygame.K_a, pygame.K_q),
+        (pygame.K_RIGHT, pygame.K_d)
+    ]
+    
     # Boucle principale du jeu
     running = True
     # Suivi des touches de confirmation déjà traitées via KEYDOWN pour éviter les doublons
@@ -122,14 +131,6 @@ def main():
         # On utilise pygame.key.get_pressed() comme méthode de secours
         keys = pygame.key.get_pressed()
         current_pressed = set()
-        
-        # Groupes de touches directionnelles (flèches + WASD/ZQSD)
-        direction_keys = [
-            (pygame.K_UP, pygame.K_w, pygame.K_z),
-            (pygame.K_DOWN, pygame.K_s),
-            (pygame.K_LEFT, pygame.K_a, pygame.K_q),
-            (pygame.K_RIGHT, pygame.K_d)
-        ]
         
         # Délai de répétition des touches directionnelles (en ms) — souvent plus long sur Windows
         repeat_delay = 200   # Après 200 ms, commencer la répétition
